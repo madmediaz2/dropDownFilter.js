@@ -1,94 +1,94 @@
 /**
- * 
  * Author: @SimarCakmak
- * gh: @madmediaz2
- * 
- *  This file's use is so that we can get a dropdownlist and make it a typable field where you can select 
- *  options based on your search. 
- *  If u want to use this class to filter through your list be sure to check ./entryform.php for an example how to use it.
- *  all the way at the bottom there is a eventlistener to append new lists to create a class object.
- * 
- *  this class dynamically generates a input field above the dropdownbox so minimal changes to HTML are needed. 
- *  This will also Enable the form to still run without javascript.
+ * GitHub: @madmediaz2
  *
- *  You need to set attribute Size otherwise it will not work.
- * 
+ * This file enhances dropdown lists by converting them into searchable fields.
+ * Check ./entryform.php for an example on how to use this class.
+ * This class dynamically generates an input field above the dropdown, minimizing HTML modifications.
+ * It ensures the form can still operate without JavaScript.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Applying the FilterList to each relevant dropdown
-    const dropdownIds = [];
-    dropdownIds.forEach(id => {
-        new FilterList(id);
-    });
+    const dropdownIds = ['supplier', 'category', 'CPU', 'country', 'warehouse_country', 'customers'];
+    dropdownIds.forEach(id => new FilterableDropdown(id));
 });
 
-
-class FilterList {
+class FilterableDropdown {
     constructor(dropDownId) {
-        this.dropDownId = dropDownId;
         this.dropDownList = document.getElementById(dropDownId);
 
-        // Check if dropdown exists
         if (!this.dropDownList) {
-            console.error('Dropdown with ID ' + dropDownId + ' does not exist.');
+            console.error(`Dropdown with ID '${dropDownId}' does not exist.`);
             return;
         }
 
-        // Create an input field dynamically
         this.inputField = document.createElement('input');
         this.inputField.type = 'text';
         this.inputField.className = 'form-control';
         this.inputField.placeholder = 'Search...';
-        this.inputField.id = dropDownId + '--search';
+        this.inputField.id = `${dropDownId}--search`;
 
-        // Insert the input field right before the dropdown
+        this.resultsContainer = document.createElement('div');
+        this.resultsContainer.className = 'dropdown-results';
+        this.resultsContainer.style.position = 'relative';
+        this.resultsContainer.style.width = '100%';
+        this.resultsContainer.style.backgroundColor = 'white';
+        this.resultsContainer.style.border = '1px solid #ccc';
+        this.resultsContainer.style.display = 'none';
+        this.resultsContainer.style.zIndex = '10000';  // Extremely high z-index
+        this.resultsContainer.style.maxHeight = '200px';
+        this.resultsContainer.style.overflowY = 'auto';
+
         this.dropDownList.parentNode.insertBefore(this.inputField, this.dropDownList);
+        this.dropDownList.parentNode.insertBefore(this.resultsContainer, this.dropDownList.nextSibling);  // Ensure it's positioned correctly in the DOM
 
-        // Style adjustments
-        this.dropDownList.style.position = 'relative';
-        this.dropDownList.style.width = '100%';
-        this.dropDownList.style.display = 'none';  // Initially hide the dropdown
-        
-
-        // Event listeners
-        this.inputField.addEventListener('input', () => this.filterOptions());
-        this.inputField.addEventListener('focus', () => this.showDropDown());
-        this.inputField.addEventListener('blur', () => setTimeout(() => this.hideDropDown(), 150));
-        this.dropDownList.addEventListener('change', () => this.selectOption());
-    }
-
-    showDropDown() {
-        if (this.inputField.value.length > 0) {
-            this.dropDownList.style.display = 'block';
-        }
-    }
-
-    hideDropDown() {
         this.dropDownList.style.display = 'none';
+
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        this.inputField.addEventListener('input', () => this.filterOptions());
+        this.inputField.addEventListener('focus', () => this.filterOptions());
+        this.inputField.addEventListener('blur', () => {
+            setTimeout(() => this.hideResults(), 150);
+        });
+        this.resultsContainer.addEventListener('click', event => {
+            if (event.target.dataset.value) {
+                this.selectOption(event.target.dataset.value, event.target.innerText);
+            }
+        });
+    }
+
+    showResults() {
+        this.resultsContainer.style.display = 'block';
+    }
+
+    hideResults() {
+        this.resultsContainer.style.display = 'none';
     }
 
     filterOptions() {
         const searchInput = this.inputField.value.toLowerCase();
-        let found = false;
+        this.resultsContainer.innerHTML = '';
 
         Array.from(this.dropDownList.options).forEach(option => {
             if (option.text.toLowerCase().includes(searchInput)) {
-                option.style.display = 'block';
-                found = true;
-            } else {
-                option.style.display = 'none';
+                const resultItem = document.createElement('div');
+                resultItem.innerText = option.text;
+                resultItem.dataset.value = option.value;
+                resultItem.style.padding = '5px';
+                resultItem.style.cursor = 'pointer';
+                this.resultsContainer.appendChild(resultItem);
             }
         });
 
-        this.dropDownList.style.display = found ? 'block' : 'none';
+        this.showResults();
     }
 
-    selectOption() {
-        if (this.dropDownList.selectedIndex > -1) {
-            this.inputField.value = this.dropDownList.options[this.dropDownList.selectedIndex].text;
-            this.hideDropDown();
-        }
+    selectOption(value, text) {
+        this.inputField.value = text;
+        this.dropDownList.value = value;
+        this.hideResults();
     }
 }
-
